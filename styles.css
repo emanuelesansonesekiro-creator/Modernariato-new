@@ -1,0 +1,3 @@
+/* Tailwind handles most styling. Custom tweaks can go here. */
+html, body { height: 100%; }
+dialog::backdrop { backdrop-filter: blur(2px); }
