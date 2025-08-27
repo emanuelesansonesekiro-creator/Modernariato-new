@@ -1,0 +1,50 @@
+name: ETL and Embeddings
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *' # opzionale, esegue ogni giorno se vuoi
+
+jobs:
+  etl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install deps
+        run: |
+          npm init -y
+          npm install node-fetch@2
+
+      - name: Run ETL (Wikidata)
+        env:
+          TZ: UTC
+        run: |
+          node scripts/etl_wikidata.js
+
+      - name: Generate embeddings (optional if OPENAI_API_KEY present)
+        if: ${{ secrets.OPENAI_API_KEY != '' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          npm install node-fetch@2
+          node scripts/generate_embeddings.js
+
+      - name: Commit data.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/data/data.json || echo "no data.json"
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update api/data/data.json from ETL [ci skip]" || echo "commit failed"
+            git push
+          fi
